@@ -1,8 +1,54 @@
-const express = require("express");
+import express from "express";
+import { config } from "dotenv";
+import { connectDB, disconnectDB } from "./config/db.js";
+
+//import routes
+import movieRoutes from "./routes/movieRoutes.js";
+import authRoutes from "./routes/authRoutes.js";
+import watchlistRoutes from "./routes/watchlistRoutes.js";
+
+config();
+connectDB();
 
 const app = express();
 
+//body parsing middlewares
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+//API routes
+app.use("/movies", movieRoutes);
+app.use("/auth", authRoutes);
+app.use("/watchlist", watchlistRoutes);
+
 const PORT = 5001;
 const server = app.listen(PORT, () => {
-    console.log(`Server running on PORT ${PORT}`)
+    console.log(`Server running on PORT ${PORT}`);
+});
+
+//handle unhandled promise rejections (ex: database connection errors)
+process.on("unhandledRejection", (err) => {
+    console.error("Unhandled rejection: ", err);
+    server.close(async () => {
+        await disconnectDB();
+        process.exit(1);
+    });
+});
+
+//handle uncaught exceptions
+process.on("uncaughtException", (err) => {
+    console.error("Unhandled Exception: ", err);
+    server.close(async () => {
+        await disconnectDB();
+        process.exit(1);
+    });
+});
+
+//graceful shutdown
+process.on("SIGTERM", (err) => {
+    console.error("SIGTERM recieved, shutting down gracefully", err);
+    server.close(async () => {
+        await disconnectDB();
+        process.exit(1);
+    });
 });
